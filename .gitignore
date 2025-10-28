@@ -1,0 +1,146 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.*
+!**/.env.example
+
+# Node / general
+node_modules/
+**/node_modules/
+**/dist/
+**/build/
+**/out/
+**/.eslintcache
+**/.pnp
+**/.pnp.js
+**/.cache
+**/.parcel-cache
+**/.vite/
+
+# Logs
+logs
+**/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Coverage / instrumentation
+**/coverage/
+**/.nyc_output/
+
+# Temporary files
+**/tmp/
+**/temp/
+**/.tmp/
+
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors / IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.orig
+
+# Web (Vite app)
+web/dist/
+web/.vite/
+web/.DS_Store
+
+# Backend (Node/Express)
+backend/dist/
+backend/tmp/
+backend/logs/
+backend/uploads/
+backend/.cache/
+backend/*.sqlite
+backend/*.db
+# Firebase Admin key (if present)
+backend/src/config/serviceAccountKey.json
+
+# Mobile (React Native)
+# RN / Metro
+mobile/.metro-cache/
+mobile/metro-cache/
+mobile/coverage/
+
+# Android
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/app/.cxx/
+mobile/android/local.properties
+mobile/android/*.iml
+mobile/android/app/*.iml
+mobile/android/.idea/
+mobile/android/captures/
+mobile/android/app/release/
+# Keystores (debug/release)
+mobile/android/*.keystore
+mobile/android/app/*.keystore
+mobile/android/*.jks
+mobile/android/app/*.jks
+# Google Services (Firebase)
+mobile/android/app/google-services.json
+# Artifacts
+mobile/android/app/*.apk
+mobile/android/app/*.aab
+
+# iOS
+mobile/ios/Pods/
+mobile/ios/build/
+mobile/ios/DerivedData/
+mobile/ios/*.hmap
+mobile/ios/*.ipa
+mobile/ios/*.dSYM
+mobile/ios/*.dSYM.zip
+mobile/ios/*.xcuserstate
+mobile/ios/**/*.xcuserstate
+mobile/ios/**/*.xcuserdatad
+mobile/ios/*.xcodeproj/xcuserdata/
+mobile/ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+mobile/ios/*.xcworkspace/xcuserdata/
+mobile/ios/.bundle/
+# Google Services (Firebase)
+mobile/ios/GoogleService-Info.plist
+
+# Mobile (React Native) — extras
+mobile/.metro-health-check*
+mobile/**/*.jsbundle
+
+# Fastlane
+mobile/**/fastlane/report.xml
+mobile/**/fastlane/Preview.html
+mobile/**/fastlane/screenshots
+mobile/**/fastlane/test_output
+
+# Yarn 2+ in mobile
+mobile/.yarn/*
+!mobile/.yarn/patches
+!mobile/.yarn/plugins
+!mobile/.yarn/releases
+!mobile/.yarn/sdks
+!mobile/.yarn/versions
+
+# iOS extras
+mobile/ios/**/.xcode.env.local
+mobile/ios/vendor/bundle/
