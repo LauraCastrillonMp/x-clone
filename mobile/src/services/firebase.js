@@ -10,12 +10,19 @@ import {
 } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: process.env.BACKEND_FIREBASE_API_KEY,
-  authDomain: process.env.BACKEND_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.BACKEND_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.BACKEND_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.BACKEND_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.BACKEND_FIREBASE_APP_ID,
+
+  apiKey: "AIzaSyDOHjmVuIQ9PSw8wc_x1yu-hnmMra6ql1k",
+
+  authDomain: "orbyt-bae72.firebaseapp.com",
+
+  projectId: "orbyt-bae72",
+
+  storageBucket: "orbyt-bae72.firebasestorage.app",
+
+  messagingSenderId: "574404750139",
+
+  appId: "1:574404750139:web:1978167cc8d3ef2c73a51e"
+
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);

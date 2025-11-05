@@ -6,9 +6,9 @@ const authRoutes = require('./src/routes/auth');
 const tweetsRoutes = require('./src/routes/tweets');
 const usersRoutes = require('./src/routes/users');
 const followsRoutes = require('./src/routes/follows');
-const notificationsRoutes = require('./src/routes/notifications');
+// const notificationsRoutes = require('./src/routes/notifications');
 const likesRoutes = require('./src/routes/likes');
-const bookmarksRoutes = require('./src/routes/bookmarks');
+// const bookmarksRoutes = require('./src/routes/bookmarks');
 const mediaRoutes = require('./src/routes/media');
 const app = express();
 app.use(cors({
@@ -19,9 +19,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tweets', tweetsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/follows', followsRoutes);
-app.use('/api/notifications', notificationsRoutes);
+// app.use('/api/notifications', notificationsRoutes);
 app.use('/api/likes', likesRoutes);
-app.use('/api/bookmarks', bookmarksRoutes);
+// app.use('/api/bookmarks', bookmarksRoutes);
 app.use('/api/media', mediaRoutes);
 const PORT = process.env.PORT || 4000;
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })

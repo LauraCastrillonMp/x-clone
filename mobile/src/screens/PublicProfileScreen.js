@@ -260,7 +260,10 @@ export default function PublicProfileScreen({ route, navigation }) {
           <TweetCard
             tweet={item}
             onToggleLike={() => handleToggleLike(item._id || item.id)}
-            onPress={() => navigation.navigate('TweetDetail', { tweetId: item._id || item.id })}
+            onPress={() => navigation.navigate('Home', {
+              screen: 'TweetDetail',
+              params: { tweetId: item._id || item.id },
+            })}
           />
         )}
         ListHeaderComponent={renderHeader}

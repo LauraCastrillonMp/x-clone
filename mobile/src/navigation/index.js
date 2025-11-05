@@ -12,8 +12,8 @@ import FollowingScreen from '../screens/FollowingScreen';
 // Screens
 import HomeScreen from '../screens/HomeScreen';
 import ComposeScreen from '../screens/ComposeScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
-import SavedScreen from '../screens/SavedScreen';
+// import NotificationsScreen from '../screens/NotificationsScreen';
+// import SavedScreen from '../screens/SavedScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import TweetDetailScreen from '../screens/TweetDetailScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
