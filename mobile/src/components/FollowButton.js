@@ -42,7 +42,7 @@ export default function FollowButton({ targetUsername, initialFollowing=false, o
 
 const styles = StyleSheet.create({
   btn: { paddingHorizontal:12, paddingVertical:8, borderRadius:8 },
-  following: { backgroundColor:'#F8F4FF', borderWidth:1, borderColor:'#6A1B9A' },
+  following: { backgroundColor:'#eadeffff', borderWidth:1, borderColor:'#6A1B9A' },
   notFollowing: { backgroundColor:'#6A1B9A' },
   text: { color:'#fff', fontWeight:'700' }
 });

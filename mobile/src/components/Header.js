@@ -1,18 +1,42 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-export default function Header({ title, username, onLogout, onBack }) {
+import { useNavigation } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
+export default function Header({ title }) {
+  const navigation = useNavigation();
+  const canGoBack = navigation?.canGoBack?.() ?? false;
+
   return (
     <View style={styles.container}>
-      {onBack ? <TouchableOpacity onPress={onBack}><Text style={styles.link}>Back</Text></TouchableOpacity> : <View style={{width:50}}/>}
-      <Text style={styles.title}>{title}</Text>
-      {username ? (
-        <TouchableOpacity onPress={onLogout}><Text style={styles.link}>{username} | Logout</Text></TouchableOpacity>
-      ) : <View style={{width:50}}/>}
+      {canGoBack ? (
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.backText}>
+            <Ionicons name="arrow-back-outline" size={22} color="#6A1B9A" />
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.spacer} />
+      )}
+      <Text numberOfLines={1} style={styles.title}>{title || ''}</Text>
+      <View style={styles.spacer} />
     </View>
   );
 }
+
 const styles = StyleSheet.create({
-  container: { height:60, paddingHorizontal:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between', backgroundColor:'#F8F4FF' },
-  title: { fontSize:18, fontWeight:'700', color:'#6A1B9A' },
-  link: { color:'#FF7043', fontWeight:'600' }
+  container: {
+    height: 56,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#eadeff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backBtn: { minWidth: 64 },
+  backText: { color: '#6A1B9A', fontWeight: '700' },
+  title: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: '#333' },
+  spacer: { width: 64 },
 });

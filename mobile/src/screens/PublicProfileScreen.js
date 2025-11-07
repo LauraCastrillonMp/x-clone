@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { View, Text, FlatList, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  View, Text, StyleSheet, Image, FlatList, RefreshControl,
-  TouchableOpacity, Alert, ActivityIndicator,
+  StyleSheet, Image, RefreshControl,
+  TouchableOpacity, Alert,
 } from 'react-native';
 import Header from '../components/Header';
 import TweetCard from '../components/TweetCard';
@@ -17,6 +18,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const [username, setUsername] = useState(routeUsername);
   const [profile, setProfile] = useState(null);
   const [tweets, setTweets] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingHeader, setLoadingHeader] = useState(true);
@@ -37,10 +39,18 @@ export default function PublicProfileScreen({ route, navigation }) {
       .catch(() => setCachedUsername(''));
   }, []);
 
+  // replace any mount/fetch behavior with focus-based load so tweets load when screen opens
   const loadTweets = useCallback(
     async (p = 1) => {
       if (!username) return;
       try {
+        // only show global loading for first page, use loadingMore for subsequent pages
+        if (p === 1) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
+        }
+
         const res = await getUserTweets(username, p);
         const list = Array.isArray(res) ? res : res?.tweets || [];
         setTweets(prev => {
@@ -54,10 +64,24 @@ export default function PublicProfileScreen({ route, navigation }) {
       } catch (e) {
         console.warn('loadTweets error', e?.message || e);
       } finally {
-        setLoadingMore(false);
+        // clear only the flags we set
+        if (p === 1) {
+          setLoading(false);
+        } else {
+          setLoadingMore(false);
+        }
       }
     },
     [username]
+  );
+
+  // load tweets whenever this screen is focused or username changes
+  useFocusEffect(
+    useCallback(() => {
+      // reset to first page on focus
+      loadTweets(1).catch(err => console.warn('useFocusEffect loadTweets error', err));
+      return () => {};
+    }, [username, loadTweets])
   );
 
   const onRefresh = useCallback(async () => {
@@ -245,48 +269,53 @@ export default function PublicProfileScreen({ route, navigation }) {
 
   const handleLoadMore = useCallback(() => {
     if (hasMore && !loadingMore) {
+      // mark loadingMore and await the load so UI stays consistent
       setLoadingMore(true);
-      loadTweets(page + 1);
+      loadTweets(page + 1).catch(err => {
+        console.warn('handleLoadMore loadTweets error', err);
+        setLoadingMore(false);
+      });
     }
   }, [hasMore, loadingMore, loadTweets, page]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F4FF' }}>
+    <View style={{ flex: 1, backgroundColor: '#eadeffff' }}>
       <Header title={username ? `@${username}` : 'Profile'} onBack={() => navigation?.goBack?.()} />
-      <FlatList
-        data={tweets}
-        keyExtractor={item => item._id || item.id}
-        renderItem={({ item }) => (
-          <TweetCard
-            tweet={item}
-            onToggleLike={() => handleToggleLike(item._id || item.id)}
-            onPress={() => navigation.navigate('Home', {
-              screen: 'TweetDetail',
-              params: { tweetId: item._id || item.id },
-            })}
-          />
-        )}
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={
-          tweets.length >= PAGE_SIZE ? (
-            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-              {loadingMore ? (
-                <ActivityIndicator color="#6A1B9A" />
-              ) : hasMore ? (
-                <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore}>
-                  <Text style={styles.loadMoreText}>Load more</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.muted}>No more</Text>
-              )}
-            </View>
-          ) : null
-        }
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6A1B9A" />
-        }
-        contentContainerStyle={{ paddingBottom: 24 }}
-      />
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: 24 }} />
+      ) : (
+        <FlatList
+          data={tweets}
+          keyExtractor={item => item._id || item.id}
+          renderItem={({ item }) => (
+            <TweetCard
+              tweet={item}
+              onToggleLike={() => handleToggleLike(item._id || item.id)}
+              onPress={() => navigation.navigate('Home', {
+                screen: 'TweetDetail',
+                params: { tweetId: item._id || item.id },
+              })}
+            />
+          )}
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={
+            tweets.length >= PAGE_SIZE ? (
+              <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                {loadingMore ? (
+                  <ActivityIndicator color="#6A1B9A" />
+                ) : hasMore ? (
+                  <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore}>
+                    <Text style={styles.loadMoreText}>Load more</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.muted}>No more</Text>
+                )}
+              </View>
+            ) : null
+          }
+          contentContainerStyle={{ paddingBottom: 24 }}
+        />
+      )}
       {!!error && !loadingHeader && (
         <View style={styles.errorBanner}>
           <Text style={styles.errText}>{error}</Text>

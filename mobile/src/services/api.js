@@ -125,19 +125,23 @@ export async function createProfile({ idToken, fullName, username }) {
 }
 
 async function tryGet(paths) {
-  let lastErr;
+  let lastErr = null;
   for (const p of paths) {
     try {
       const res = await fetchWithAuth(`${BASE_URL}${p}`);
-      if (!res.ok) {
-        const msg = await res.text();
+      // If server returned HTML (404 page) treat as non-json failure and continue
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        const msg = await res.text().catch(() => '');
         // Stop on auth errors
         if (res.status === 401 || res.status === 403) throw new Error(msg || `Auth ${res.status}`);
         throw new Error(msg || `${p} ${res.status}`);
       }
+      // parse JSON (may throw)
       return await res.json();
     } catch (e) {
       lastErr = e;
+      // try next path
     }
   }
   throw lastErr;
@@ -211,14 +215,13 @@ export async function getFollowers(username, page = 1, limit = 10) {
 }
 
 // Feed (with client-side pagination fallback)
+// Only try endpoints that exist on the backend: prefer /tweets/feed and /tweets
 let __feedCache = { all: null, at: 0 };
 
 async function fetchAllFeed() {
-  // Try endpoints without pagination to get the full list
   const data = await tryGet([
     '/tweets/feed',
     '/tweets',
-    '/feed',
   ]);
   const raw =
     (Array.isArray(data?.tweets) && data.tweets) ||
@@ -227,7 +230,6 @@ async function fetchAllFeed() {
     (Array.isArray(data?.data) && data.data) ||
     (Array.isArray(data) && data) ||
     [];
-  // newest first
   const sorted = raw.slice().sort((a, b) => {
     const da = new Date(a?.createdAt || a?.created_at || 0).getTime();
     const db = new Date(b?.createdAt || b?.created_at || 0).getTime();
@@ -237,18 +239,16 @@ async function fetchAllFeed() {
   return sorted;
 }
 
-// Feed with server pagination when available; fallback to cached client-side slice
-export async function getFeed(page = 1, limit = 10) {
-  const qs = `?page=${page}&limit=${limit}`;
+export async function getFeed(page = 1, limit = 10, filter = undefined) {
+  const qs = `?page=${page}&limit=${limit}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}`;
 
-  // Try server-side pagination first
+  // try server-side feed endpoint first (only valid endpoints)
   const data = await tryGet([
     `/tweets/feed${qs}`,
     `/tweets${qs}`,
-    `/feed${qs}`,
   ]);
 
-  let list =
+  const list =
     (Array.isArray(data?.tweets) && data.tweets) ||
     (Array.isArray(data?.results) && data.results) ||
     (Array.isArray(data?.items) && data.items) ||
@@ -256,16 +256,11 @@ export async function getFeed(page = 1, limit = 10) {
     (Array.isArray(data) && data) ||
     [];
 
-  // If server returns exactly a page, use it
-  if (list.length === limit || (page === 1 && list.length > 0 && list.length < limit)) {
+  if (Array.isArray(list)) {
     return { tweets: list, total: undefined };
   }
 
-  // Fallback: pull full feed (cache for 30s) and slice client-side
-  const now = Date.now();
-  const fresh = __feedCache.all && now - __feedCache.at < 30_000;
-  const all = fresh ? __feedCache.all : await fetchAllFeed();
-
+  const all = await fetchAllFeed();
   const start = Math.max(0, (page - 1) * limit);
   const chunk = all.slice(start, start + limit);
   return { tweets: chunk, total: all.length };
@@ -387,41 +382,20 @@ export async function getFollowers(username, page=1, limit=10) {
 }
 */
 
-// BOOKMARKS
-export const bookmarkTweet = tweetId =>
-  fetchWithAuth(`${BASE_URL}/bookmarks`, {
-    method: 'POST',
-    body: JSON.stringify({ tweetId }),
-  }).then(r => r.json());
-
-export const removeBookmark = tweetId =>
-  fetchWithAuth(`${BASE_URL}/bookmarks/remove`, {
-    method: 'POST',
-    body: JSON.stringify({ tweetId }),
-  }).then(r => r.json());
-
-export const getBookmarks = (username, page = 1) =>
-  fetchWithAuth(`${BASE_URL}/users/${username}/bookmarks?page=${page}`).then(r =>
-    r.json(),
-  );
-
-// NOTIFICATIONS
-export const getNotifications = (page = 1) =>
-  getAuthHeader().then(h =>
-    fetch(`${BASE_URL}/notifications?page=${page}`, { headers: h }).then(r =>
-      r.json(),
-    ),
-  );
-
-export const markNotificationRead = id =>
-  fetchWithAuth(`${BASE_URL}/notifications/mark-read`, {
-    method: 'POST',
-    body: JSON.stringify({ notificationId: id }),
-  }).then(r => r.json());
-
 // SEARCH for future use
 export async function searchUsers(q) {
   const res = await fetchWithAuth(`${BASE_URL}/users/search?q=${encodeURIComponent(q)}`);
   if (!res.ok) throw new Error(`search ${res.status}`);
   return res.json();
+}
+
+export async function loginWithUsername(username, password) {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: username.toLowerCase(), password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || 'Login failed');
+  return data; // { idToken, refreshToken, user, ... }
 }

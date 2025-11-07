@@ -82,39 +82,44 @@ export default function FollowersScreen({ route, navigation }) {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.row}
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate('PublicProfile', { username: item.username })} // route name from B)
-    >
-      <View style={styles.avatarWrap}>
-        {item.avatarUrl ? (
-          <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <Text style={styles.avatarInitials}>{(item.fullName?.[0] || item.username?.[0] || 'U').toUpperCase()}</Text>
-          </View>
-        )}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name} numberOfLines={1}>{item.fullName || item.username}</Text>
-        <Text style={styles.handle} numberOfLines={1}>@{item.username}</Text>
-      </View>
+  const renderItem = ({ item }) => {
+    const isMe = !!myUsername && (item?.username || '').toLowerCase() === myUsername;
+    return (
       <TouchableOpacity
-        style={styles.followBtn}
-        disabled={!!busyMap[item.username]}
-        onPress={() => onToggleFollow(item.username, !!item.isFollowing)}
+        style={styles.row}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('PublicProfile', { username: item.username })}
       >
-        <Text style={styles.followBtnText}>
-          {busyMap[item.username] ? '...' : (item.isFollowing ? 'Dejar de seguir' : 'Seguir')}
-        </Text>
+        <View style={styles.avatarWrap}>
+          {item.avatarUrl ? (
+            <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Text style={styles.avatarInitials}>{(item.fullName?.[0] || item.username?.[0] || 'U').toUpperCase()}</Text>
+            </View>
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name} numberOfLines={1}>{item.fullName || item.username}</Text>
+          <Text style={styles.handle} numberOfLines={1}>@{item.username}</Text>
+        </View>
+        {!isMe && (
+          <TouchableOpacity
+            style={styles.followBtn}
+            disabled={!!busyMap[item.username]}
+            onPress={() => onToggleFollow(item.username, !!item.isFollowing)}
+          >
+            <Text style={styles.followBtnText}>
+              {busyMap[item.username] ? '...' : (item.isFollowing ? 'Unfollow' : 'Follow')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F4FF' }}>
+    <View style={{ flex: 1, backgroundColor: '#eadeffff' }}>
       <Header title={`@${username} • Followers`} onBack={() => navigation?.goBack?.()} />
       {loading ? (
         <View style={styles.center}><ActivityIndicator color="#6A1B9A" /></View>

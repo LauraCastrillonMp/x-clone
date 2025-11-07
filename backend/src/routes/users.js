@@ -47,4 +47,18 @@ router.get('/:username/profile', async (req, res) => {
 router.get('/:username/following', auth, UserController.listFollowing);
 router.get('/:username/followers', auth, UserController.listFollowers);
 
+// get user by email
+router.get('/by-email', async (req, res) => {
+  const email = String(req.query.email || '').toLowerCase().trim();
+  if (!email) return res.status(400).json({ error: 'email required' });
+  try {
+    const user = await User.findOne({ email }).select('username').lean();
+    if (!user) return res.status(404).json({ error: 'not found' });
+    return res.json({ username: user.username });
+  } catch (err) {
+    console.error('by-email lookup failed', err);
+    return res.status(500).json({ error: 'server error' });
+  }
+});
+
 module.exports = router;

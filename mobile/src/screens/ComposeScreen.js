@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { uploadToCloudinary, postTweet } from '../services/api';
+import Header from '../components/Header';
 
 const MAX_TWEET_CHARS = 280;
 
@@ -11,6 +12,7 @@ export default function ComposeScreen({ route, navigation }) {
   const [text, setText] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [images, setImages] = useState([]); // [{ uri, width, height }]
+  const [mediaUris, setMediaUris] = React.useState([]);
 
   const remaining = useMemo(() => MAX_TWEET_CHARS - (text?.length || 0), [text]);
   const canPost = text.trim().length > 0 && text.length <= MAX_TWEET_CHARS;
@@ -43,10 +45,12 @@ export default function ComposeScreen({ route, navigation }) {
     const assets = Array.isArray(res.assets) ? res.assets : [];
     const next = assets.map(a => ({ uri: a.uri, width: a.width, height: a.height })).filter(a => !!a.uri);
     setImages(prev => [...prev, ...next].slice(0, MAX_PHOTOS));
+    setMediaUris(assets.map(a => a.uri).filter(Boolean));
   };
 
   const removeImageAt = (idx) => {
     setImages(prev => prev.filter((_, i) => i !== idx));
+    setMediaUris(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handlePost = async () => {
@@ -68,8 +72,11 @@ export default function ComposeScreen({ route, navigation }) {
         if (url) uploaded.push(url);
       }
 
-      await postTweet({ text: body, media: uploaded });
-      setText(''); setImages([]);
+      // prefer uploaded cloud URLs; never send local URIs (mediaUris)
+      const media = uploaded.length ? uploaded : [];
+      await postTweet({ text: body, media });
+      setText(''); setImages([]); setMediaUris([]);
+      Alert.alert('Publicado', 'Tu orby ha sido publicado con éxito.');
       if (navigation.canGoBack()) navigation.goBack();
       else navigation.navigate('MainTabs', { screen: 'Home' });
     } catch (e) {
@@ -91,7 +98,7 @@ export default function ComposeScreen({ route, navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF' }}>
-      {/* ...existing header if any... */}
+      <Header title="Make a orby" />
       <View style={{ padding: 12 }}>
         <TextInput
           value={text}
@@ -132,9 +139,6 @@ export default function ComposeScreen({ route, navigation }) {
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
           <Text>{text.length}/{MAX_TWEET_CHARS}</Text>
-          <TouchableOpacity onPress={handlePost} disabled={!canPost}>
-            <Text style={{ opacity: canPost ? 1 : 0.4 }}>{publishing ? 'Publishing...' : 'Tweet'}</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </View>

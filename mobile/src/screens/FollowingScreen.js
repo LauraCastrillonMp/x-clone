@@ -40,39 +40,48 @@ export default function FollowingScreen({ route, navigation }) {
     );
   }, []);
 
-  // support silent refresh on focus
-  const loadPage = useCallback(async (p = 1, { silent = false } = {}) => {
-    if (p > 1 && loadingMore) return;
-    if (p === 1 && !silent) setLoading(true); else if (p > 1) setLoadingMore(true);
+  // make load support silent refresh (imitate FollowersScreen behaviour)
+  const load = useCallback(async (p = 1, { silent = false } = {}) => {
+    if (!username) return;
+    if (p === 1 && !silent) setLoading(true);
+    if (p > 1) setLoadingMore(true);
     try {
       const res = await getFollowing(username, p, PAGE_SIZE);
-      const listRaw = res?.results || [];
-      const pageItems = Array.isArray(listRaw) ? listRaw : [];
+      const list = Array.isArray(res?.results) ? res.results : [];
       setItems(prev => {
-        if (p === 1) return sortUsers(pageItems);
+        if (p === 1) return sortUsers(list);
         const seen = new Set(prev.map(u => u._id || u.id || u.username));
-        const toAdd = pageItems.filter(u => !seen.has(u._id || u.id || u.username));
+        const toAdd = list.filter(u => !seen.has(u._id || u.id || u.username));
         return sortUsers([...prev, ...toAdd]);
       });
-      setHasMore((pageItems?.length || 0) >= PAGE_SIZE);
+
+      // follow FollowersScreen: prefer explicit server hasMore flag
+      setHasMore(!!res?.hasMore && list.length > 0);
       setPage(p);
+    } catch (e) {
+      // keep behaviour minimal: you can set an error state here if desired
     } finally {
-      if (p === 1 && !silent) setLoading(false); else if (p > 1) setLoadingMore(false);
+      if (p === 1 && !silent) setLoading(false);
+      if (p > 1) setLoadingMore(false);
       setRefreshing(false);
     }
-  }, [username, loadingMore, sortUsers]);
+  }, [username, sortUsers]);
 
-  useEffect(() => { if (username) loadPage(1); }, [username, loadPage]);
+  useEffect(() => { setLoading(true); load(1); }, [load]);
 
-  // silent refresh whenever you come back from a profile
+  // silent refresh when returning to this screen (same as FollowersScreen)
   useFocusEffect(
     useCallback(() => {
-      if (username) loadPage(1, { silent: true });
-    }, [username, loadPage])
+      if (username) load(1, { silent: true });
+    }, [username, load])
   );
 
-  const onRefresh = useCallback(() => { setRefreshing(true); loadPage(1); }, [loadPage]);
-  const handleLoadMore = useCallback(() => { if (hasMore && !loadingMore) loadPage(page + 1); }, [hasMore, loadingMore, loadPage, page]);
+  const onRefresh = useCallback(() => { setRefreshing(true); load(1); }, [load]);
+
+  // imitate FollowersScreen onLoadMore behaviour
+  const onLoadMore = useCallback(() => {
+    if (hasMore && !loadingMore) { setLoadingMore(true); load(page + 1); }
+  }, [hasMore, loadingMore, page, load]);
 
   const onToggleFollow = async (targetUsername, currentlyFollowing) => {
     if (!targetUsername || busyMap[targetUsername]) return;
@@ -92,41 +101,46 @@ export default function FollowingScreen({ route, navigation }) {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.row}
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate('PublicProfile', { username: item.username })}
-    >
-      <View style={styles.avatarWrap}>
-        {item.avatarUrl ? (
-          <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <Text style={styles.avatarInitials}>
-              {(item.fullName?.[0] || item.username?.[0] || 'U').toUpperCase()}
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name} numberOfLines={1}>{item.fullName || item.username}</Text>
-        <Text style={styles.handle} numberOfLines={1}>@{item.username}</Text>
-      </View>
+  const renderItem = ({ item }) => {
+    const isMe = !!myUsername && (item?.username || '').toLowerCase() === myUsername;
+    return (
       <TouchableOpacity
-        style={styles.followBtn}
-        disabled={!!busyMap[item.username]}
-        onPress={() => onToggleFollow(item.username, !!item.isFollowing)}
+        style={styles.row}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('PublicProfile', { username: item.username })}
       >
-        <Text style={styles.followBtnText}>
-          {busyMap[item.username] ? '...' : (item.isFollowing ? 'Dejar de seguir' : 'Seguir')}
-        </Text>
+        <View style={styles.avatarWrap}>
+          {item.avatarUrl ? (
+            <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Text style={styles.avatarInitials}>
+                {(item.fullName?.[0] || item.username?.[0] || 'U').toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name} numberOfLines={1}>{item.fullName || item.username}</Text>
+          <Text style={styles.handle} numberOfLines={1}>@{item.username}</Text>
+        </View>
+        {!isMe && (
+          <TouchableOpacity
+            style={styles.followBtn}
+            disabled={!!busyMap[item.username]}
+            onPress={() => onToggleFollow(item.username, !!item.isFollowing)}
+          >
+            <Text style={styles.followBtnText}>
+              {busyMap[item.username] ? '...' : (item.isFollowing ? 'Unfollow' : 'Follow')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F4FF' }}>
+    <View style={{ flex: 1, backgroundColor: '#eadeffff' }}>
       <Header title={`@${username} • Following`} onBack={() => navigation?.goBack?.()} />
       {loading && items.length === 0 ? (
         <View style={styles.center}><ActivityIndicator color="#6A1B9A" /></View>
@@ -139,7 +153,12 @@ export default function FollowingScreen({ route, navigation }) {
           ListFooterComponent={
             <View style={{ paddingVertical: 16, alignItems: 'center' }}>
               {loadingMore ? <ActivityIndicator color="#6A1B9A" /> : hasMore ? (
-                <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore}>
+                <TouchableOpacity
+                  style={styles.loadMoreBtn}
+                  onPress={onLoadMore}
+                  disabled={loadingMore}
+                  activeOpacity={0.8}
+                >
                   <Text style={styles.loadMoreText}>Load more</Text>
                 </TouchableOpacity>
               ) : <Text style={styles.muted}>No more</Text>}

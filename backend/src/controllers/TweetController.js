@@ -1,8 +1,8 @@
 const Tweet = require('../models/Tweet');
 const Like = require('../models/Like');
-const User = require('../models/User'); // add import
+const User = require('../models/User');
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
 
-// Helpers: safePopulate (actualizado para Mongoose 6+)
 async function populateTweet(doc) {
   if (!doc) return doc;
   try {
@@ -16,7 +16,7 @@ async function populateTweet(doc) {
 const MAX_TWEET_CHARS = 280
 
 module.exports = {
-  // List (feed) - paginado simple
+  // feed / top-level tweets (paginated)
   async feed(req, res) {
     try {
       const page = Math.max(1, parseInt(req.query.page || '1'));
@@ -52,7 +52,6 @@ module.exports = {
     }
   },
 
-  // Obtener un tweet por id
   async get(req, res) {
     try {
       const id = req.params.id;
@@ -79,7 +78,6 @@ module.exports = {
     }
   },
 
-  // Crear tweet (requiere auth)
   async create(req, res) {
     try {
       if (!req.user || !req.user._id) return res.status(401).json({ message: 'Unauthorized' });
@@ -91,10 +89,29 @@ module.exports = {
         return res.status(400).json({ message: `Tweet must be 1–${MAX_TWEET_CHARS} characters` })
       }
 
+      const normalizeMedia = (arr = []) => {
+        if (!Array.isArray(arr)) return [];
+        return arr
+          .map(m => {
+            if (!m) return null;
+            if (typeof m !== 'string') return null;
+            const s = m.trim();
+            if (!s) return null;
+            if (s.startsWith('http')) return s;
+            const isVideo = /\.(mp4|mov|webm|m4v)$/i.test(s) || s.includes('/video/');
+            const type = isVideo ? 'video' : 'image';
+            if (!CLOUDINARY_CLOUD_NAME) return s;
+            return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/${type}/upload/${s}`;
+          })
+          .filter(Boolean);
+      };
+
+      const mediaUrls = normalizeMedia(media);
+
       const tweet = new Tweet({
         author: req.user._id,
         text: clean,
-        media: Array.isArray(media) ? media : media ? [media] : [],
+        media: mediaUrls,
         parent: parent || null,
       });
 
@@ -112,7 +129,6 @@ module.exports = {
     }
   },
 
-  // Crear comentario (auth required)
   async createComment(req, res) {
     try {
       if (!req.user || !req.user._id) return res.status(401).json({ message: 'Unauthorized' });
@@ -142,7 +158,6 @@ module.exports = {
     }
   },
 
-  // Obtener comentarios de un tweet
   async getComments(req, res) {
     try {
       const parentId = req.params.id;
@@ -175,26 +190,7 @@ module.exports = {
     }
   },
 
-  // List general
-  async list(req, res) {
-    try {
-      const page = Math.max(1, parseInt(req.query.page || '1'));
-      const limit = 20;
-      const tweets = await Tweet.find({ parent: null })
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .populate('author', 'username fullName')
-        .lean()
-        .exec();
-      return res.json({ tweets });
-    } catch (err) {
-      console.error('TweetController.list error', err);
-      return res.status(500).json({ message: 'Server error' });
-    }
-  },
-
-  // NEW: Tweets por usuario (paginado)
+  // tweets by user
   async byUser(req, res) {
     try {
       const { username } = req.params;
@@ -232,43 +228,6 @@ module.exports = {
     } catch (err) {
       console.error('TweetController.byUser error', err);
       return res.status(500).json({ message: 'Server error' });
-    }
-  },
-
-  // Example feed handler
-  list: async (req, res) => {
-    try {
-      const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-      const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 50);
-      const skip = (page - 1) * limit;
-
-      // Only top-level tweets (no replies)
-      const topLevel = { $or: [{ replyTo: null }, { replyTo: { $exists: false } }] };
-
-      const tweets = await Tweet.find(topLevel)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('author', 'username name avatar')
-        .lean();
-
-      // Compute likedByMe in one query
-      const ids = tweets.map(t => t._id);
-      let likedSet = new Set();
-      if (req.user?.id && ids.length) {
-        const liked = await Like.find({ user: req.user.id, tweet: { $in: ids } }, { tweet: 1 }).lean();
-        likedSet = new Set(liked.map(l => l.tweet.toString()));
-      }
-
-      const data = tweets.map(t => ({
-        ...t,
-        likedByMe: likedSet.has(t._id.toString()),
-      }));
-
-      res.json({ data, page, limit });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to load feed' });
     }
   },
 };

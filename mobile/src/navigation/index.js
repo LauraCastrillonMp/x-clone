@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -8,6 +8,7 @@ import SearchScreen from '../screens/SearchScreen';
 import PublicProfileScreen from '../screens/PublicProfileScreen';
 import FollowersScreen from '../screens/FollowersScreen';
 import FollowingScreen from '../screens/FollowingScreen';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -62,18 +63,18 @@ function SearchStack() {
       <SearchStackNav.Screen
         name="PublicProfile"
         component={PublicProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ headerShown: false }}
       />
       {/* Add these so PublicProfile can navigate to them */}
       <SearchStackNav.Screen
         name="Followers"
         component={FollowersScreen}
-        options={{ title: 'Followers' }}
+        options={{ headerShown: false }}
       />
       <SearchStackNav.Screen
         name="Following"
         component={FollowingScreen}
-        options={{ title: 'Following' }}
+        options={{ headerShown: false }}
       />
     </SearchStackNav.Navigator>
   );
@@ -84,16 +85,23 @@ function SearchStack() {
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#6A1B9A',
-      }}
+        tabBarInactiveTintColor: '#777',
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'Search') iconName = focused ? 'search' : 'search-outline';
+          else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
+          // return the icon component
+          return <Ionicons name={iconName} size={size ?? 24} color={color} />;
+        },
+      })}
     >
-      <Tab.Screen name="Home" component={HomeStack} />
-      {/* <Tab.Screen name="Notifications" component={NotificationsScreen} />
-      <Tab.Screen name="Saved" component={SavedScreen} /> */}
-      <Tab.Screen name="Search" component={SearchStack} />
-      <Tab.Screen name="Profile" component={ProfileStack} />
+      <Tab.Screen name="Home" component={HomeStack} options={{ tabBarLabel: 'Home' }} />
+      <Tab.Screen name="Search" component={SearchStack} options={{ tabBarLabel: 'Search' }} />
+      <Tab.Screen name="Profile" component={ProfileStack} options={{ tabBarLabel: 'Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -102,15 +110,35 @@ function MainTabs() {
 
 export default function AppNavigation() {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [username, setUsername] = useState(null);
 
   useEffect(() => {
     async function checkAuth() {
       const token = await AsyncStorage.getItem('idToken');
       if (token) setAuthToken(token); // make API include Authorization
       setIsAuthenticated(!!token);
+      const storedUser = await AsyncStorage.getItem('username');
+      setUsername(storedUser || null);
     }
     checkAuth();
   }, []);
+
+  // Ensure header username updates when auth state changes (login/logout)
+  useEffect(() => {
+    async function refreshUsername() {
+      try {
+        if (isAuthenticated) {
+          const storedUser = await AsyncStorage.getItem('username');
+          setUsername(storedUser || null);
+        } else {
+          setUsername(null);
+        }
+      } catch (e) {
+        setUsername(null);
+      }
+    }
+    refreshUsername();
+  }, [isAuthenticated]);
 
   async function handleLogout() {
     try {
@@ -119,6 +147,26 @@ export default function AppNavigation() {
       if (setAuthToken) setAuthToken(null);
     } catch {}
     setIsAuthenticated(false);
+    setUsername(null);
+  }
+
+  // Add this small header component so it receives the current username
+  function HeaderBrand({ navigation, username }) {
+    return (
+      <TouchableOpacity
+        style={{ flexDirection: 'row', alignItems: 'center' }}
+        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Main' }] })}
+        accessibilityLabel="Ir al inicio"
+      >
+        <Image source={require('../assets/logo.png')} style={{ width: 32, height: 32 }} />
+        <View style={{ marginLeft: 8 }}>
+          <Text style={{ fontWeight: '700', fontSize: 18, color: '#6A1B9A' }}> Orbyt</Text>
+          {username ? (
+            <Text style={{ fontSize: 12, color: '#666' }}>{`@${username}`}</Text>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    );
   }
 
   if (isAuthenticated === null) {
@@ -136,7 +184,7 @@ export default function AppNavigation() {
         <Stack.Navigator 
           initialRouteName="Main"
           screenOptions={{
-            headerShown: false,
+            // headerShown: false,
             contentStyle: { backgroundColor: '#ffffff' },
           }}
         >
@@ -146,16 +194,16 @@ export default function AppNavigation() {
             options={({ navigation }) => ({
               headerShown: true,
               headerTitle: '',
-              // asegurar que no haya botón "volver" ni gestos que regresen al auth
-              headerLeft: () => null,
+              // use the HeaderBrand component so it receives the current username
+              headerLeft: () => <HeaderBrand navigation={navigation} username={username} />,
               gestureEnabled: false,
               headerRight: () => (
                 <TouchableOpacity
-                  style={styles.logoutBtn}
                   onPress={() => handleLogout()}
                   accessibilityLabel="Cerrar sesión"
+                  style={{ paddingHorizontal: 8 }}
                 >
-                  <Text style={styles.logoutText}>🔒</Text>
+                  <Ionicons name="log-out-outline" size={26} color="#6A1B9A" />
                 </TouchableOpacity>
               ),
             })}
@@ -171,23 +219,31 @@ export default function AppNavigation() {
           }}
         >
           <Stack.Screen name="Login">
-            {props => <LoginScreen {...props} onAuthSuccess={() => setIsAuthenticated(true)} />}
+            {props => (
+              <LoginScreen
+                {...props}
+                onAuthSuccess={async (uname) => {
+                  if (uname) await AsyncStorage.setItem('username', uname);
+                  setIsAuthenticated(true);
+                  setUsername(uname ?? (await AsyncStorage.getItem('username')));
+                }}
+              />
+            )}
           </Stack.Screen>
           <Stack.Screen name="Register">
-            {props => <RegisterScreen {...props} onAuthSuccess={() => setIsAuthenticated(true)} />}
+            {props => (
+              <RegisterScreen
+                {...props}
+                onAuthSuccess={async (uname) => {
+                  if (uname) await AsyncStorage.setItem('username', uname);
+                  setIsAuthenticated(true);
+                  setUsername(uname ?? (await AsyncStorage.getItem('username')));
+                }}
+              />
+            )}
           </Stack.Screen>
         </Stack.Navigator>
       )}
     </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  logoutBtn: {
-    marginRight: 12,
-    padding: 6,
-  },
-  logoutText: {
-    fontSize: 20,
-  },
-});

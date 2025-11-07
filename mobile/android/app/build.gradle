@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services" // add this line
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -116,6 +117,7 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+    implementation 'com.google.android.gms:play-services-auth:20.6.0' // add this line
 }
 
 // añade esto al final del archivo build.gradle (si ya existe, no lo dupliques)

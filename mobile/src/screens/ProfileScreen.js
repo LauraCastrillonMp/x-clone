@@ -15,6 +15,7 @@ import Header from '../components/Header';
 import TweetCard from '../components/TweetCard';
 import { useFocusEffect } from '@react-navigation/native';
 import { getMyProfile, getProfile, getUserTweets, toggleLike } from '../services/api';
+import useAuth from '../hooks/useAuth';
 
 const PAGE_SIZE = 10;
 const PAGINATION_ENABLED = true;           // ENABLE paging
@@ -81,6 +82,9 @@ function Avatar({ uri, size = 88, name, username }) {
 }
 
 export default function ProfileScreen({ navigation }) {
+  const { user, logout } = useAuth();
+  const username = user?.email ? user.email.split('@')[0] : user?.displayName;
+
   // data
   const [resolvedUsername, setResolvedUsername] = useState('');
   const [profile, setProfile] = useState(null);
@@ -409,8 +413,8 @@ export default function ProfileScreen({ navigation }) {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F4FF' }}>
-      <Header title={resolvedUsername ? `@${resolvedUsername}` : 'Profile'} />
+    <View style={{ flex: 1 }}>
+      <Header title="Profile" />
       {loadingHeader && !resolvedUsername ? (
         <View style={styles.center}>
           <ActivityIndicator color="#6A1B9A" />

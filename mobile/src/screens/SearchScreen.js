@@ -116,11 +116,11 @@ export default function SearchScreen({ navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F4FF' }}>
+    <View style={{ flex: 1, backgroundColor: '#eadeffff' }}>
       <Header title="Search" />
       <View style={styles.searchBox}>
         <TextInput
-          placeholder="Search users by name or @username"
+          placeholder="Search users by name"
           value={q}
           onChangeText={setQ}
           autoCapitalize="none"

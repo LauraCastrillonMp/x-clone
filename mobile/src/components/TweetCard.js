@@ -79,13 +79,16 @@ export default function TweetCard({ tweet, onToggleLike, onPress, onOpenComments
 
       {!!body && <Text style={styles.text}>{body}</Text>}
 
-      {!!media?.length && (
-        <View style={styles.mediaWrap}>
-          {media.map((m, idx) => {
-            const uri = typeof m === 'string' ? m : m?.url || m?.uri;
-            if (!uri) return null;
-            return <Image key={idx} source={{ uri }} style={styles.image} />;
-          })}
+      {tweet.media && Array.isArray(tweet.media) && tweet.media.length > 0 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+          {tweet.media.map((url, idx) => (
+            <Image
+              key={idx}
+              source={{ uri: url }}
+              style={{ width: 240, height: 240, borderRadius: 8, marginRight: 8, marginBottom: 8 }}
+              resizeMode="cover"
+            />
+          ))}
         </View>
       )}
 
