@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from './firebase';
 
 // Use 10.0.2.2 on Android emulator; use your PC LAN IP on a real device
-// const BASE_URL = 'http://10.0.2.2:4000/api'; // emulator
-const BASE_URL = 'http://10.194.71.216:4000/api'; 
+const BASE_URL = 'http://10.0.2.2:4000/api'; // emulator
+// const BASE_URL = 'http://10.194.71.216:4000/api'; 
 const CLOUDINARY_CLOUD_NAME = 'dbewhbfnx'; // from backend .env
 const CLOUDINARY_UPLOAD_PRESET = null; // null => use signed uploads via backend
 
